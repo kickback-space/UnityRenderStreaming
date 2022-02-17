@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.EnhancedTouch;
+using Unity.RenderStreaming.InputSystem;
 
 namespace Unity.RenderStreaming.Samples
 {
@@ -91,9 +91,6 @@ namespace Unity.RenderStreaming.Samples
         {
             playerInput.onDeviceChange += OnDeviceChange;
             m_InitialCameraState.SetFromTransform(transform);
-
-            // Need to set enable the flag to receive touch screen event from mobile devices.
-            EnhancedTouchSupport.Enable();
         }
 
         void OnDeviceChange(InputDevice device, InputDeviceChange change)
