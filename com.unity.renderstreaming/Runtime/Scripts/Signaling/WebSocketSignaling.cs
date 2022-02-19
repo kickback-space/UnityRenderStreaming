@@ -69,6 +69,8 @@ namespace Unity.RenderStreaming.Signaling
         public event OnConnectHandler OnCreateConnection;
         public event OnDisconnectHandler OnDestroyConnection;
         public event OnOfferHandler OnOffer;
+        public event EventHandler<string> OnMessage;
+        public event EventHandler OnStop;
         #pragma warning disable 0067
         // this event is never used in this class
         public event OnAnswerHandler OnAnswer;
@@ -219,6 +221,8 @@ namespace Unity.RenderStreaming.Signaling
                             connectionId = routedMessage.from,
                             sdp = msg.sdp
                         };
+                        answer.sdp = answer.sdp.Replace("m=audio 9 UDP/TLS/RTP/SAVPF", "m=audio 10 UDP/TLS/RTP/SAVPF");
+                        answer.sdp = answer.sdp.Replace("useinbandfec=1", "useinbandfec=1; stereo=1; sprop-stereo=1");
                         m_mainThreadContext.Post(d => OnAnswer?.Invoke(this, answer), null);
                     }
                     else if (routedMessage.type == "candidate")
@@ -236,6 +240,9 @@ namespace Unity.RenderStreaming.Signaling
                     {
                         msg = JsonUtility.FromJson<SignalingMessage>(content);
                         Debug.LogError(msg.message);
+                    }else if (routedMessage.type == "msg" || routedMessage.type == "request")
+                    {
+                        m_mainThreadContext.Post(d => OnMessage?.Invoke(this, content), null);
                     }
                 }
             }
@@ -260,12 +267,12 @@ namespace Unity.RenderStreaming.Signaling
         private void WSClosed(object sender, CloseEventArgs e)
         {
             Debug.Log($"Signaling: WS connection closed, code: {e.Code}");
-
+            m_mainThreadContext.Post(d => OnStop?.Invoke(this,EventArgs.Empty), null);
             m_wsCloseEvent.Set();
             m_webSocket = null;
         }
 
-        private void WSSend(object data)
+        public void WSSend(object data)
         {
             if (m_webSocket == null || m_webSocket.ReadyState != WebSocketState.Open)
             {

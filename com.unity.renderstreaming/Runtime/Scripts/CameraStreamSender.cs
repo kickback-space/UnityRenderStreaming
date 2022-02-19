@@ -1,3 +1,4 @@
+using System;
 using Unity.WebRTC;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -34,6 +35,8 @@ namespace Unity.RenderStreaming
             m_camera = GetComponent<Camera>();
         }
 
+        public VideoStreamTrack _videoStreamTrack;
+        
         protected override MediaStreamTrack CreateTrack()
         {
             RenderTexture rt;
@@ -66,8 +69,19 @@ namespace Unity.RenderStreaming
                 rt.Create();
                 m_camera.targetTexture = rt;
             }
+            _videoStreamTrack = new VideoStreamTrack(rt);
+            _videoStreamTrack.tempID = 1243;
+            return _videoStreamTrack;
+        }
 
-            return new VideoStreamTrack(rt);
+        public void DestroyEncoder()
+        {
+            _videoStreamTrack.DestroyEncoder();
+        }
+        public void Destroy()
+        {
+            //_videoStreamTrack.DestroyEncoder();
+            _videoStreamTrack.Dispose();
         }
     }
 }

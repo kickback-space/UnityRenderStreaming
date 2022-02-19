@@ -1,5 +1,4 @@
 using System;
-using Unity.Collections;
 using Unity.WebRTC;
 using UnityEngine;
 
@@ -10,20 +9,38 @@ namespace Unity.RenderStreaming
     /// </summary>
     public class AudioStreamSender : StreamSenderBase
     {
-        protected AudioStreamTrack track;
+        [SerializeField, Tooltip("Play microphone input (Required)")]
+        public AudioSource audioSource;
+        public AudioStreamTrack track;
 
-        int m_sampleRate = 0;
+        int _sampleRate = 0;
 
+        public AudioSource AudioSource
+        {
+            set
+            {
+                audioSource = value;
+                _sampleRate = audioSource.clip.samples;
+            }
+            get
+            {
+                return audioSource;
+            }
+        }
 
         protected virtual void Awake()
         {
+            if(audioSource != null && audioSource.clip != null)
+            {
+                _sampleRate = audioSource.clip.samples;
+            }
+            else
+            {
+                _sampleRate = AudioSettings.outputSampleRate;
+            }
+
             OnStartedStream += _OnStartedStream;
             OnStoppedStream += _OnStoppedStream;
-        }
-
-        void OnAudioConfigurationChanged(bool deviceWasChanged)
-        {
-            m_sampleRate = AudioSettings.outputSampleRate;
         }
 
         void _OnStartedStream(string connectionId)
@@ -43,8 +60,11 @@ namespace Unity.RenderStreaming
 
         protected virtual void OnEnable()
         {
-            OnAudioConfigurationChanged(false);
-            AudioSettings.OnAudioConfigurationChanged += OnAudioConfigurationChanged;
+            if (audioSource == null)
+            {
+                Debug.LogFormat("AudioSource required");
+                return;
+            }
 
             if (track != null)
                 track.Enabled = true;
@@ -52,8 +72,6 @@ namespace Unity.RenderStreaming
 
         protected virtual void OnDisable()
         {
-            AudioSettings.OnAudioConfigurationChanged -= OnAudioConfigurationChanged;
-
             try
             {
                 if (track != null)
@@ -63,25 +81,26 @@ namespace Unity.RenderStreaming
             {
                 track = null;
             }
+
+            if (audioSource == null)
+            {
+                return;
+            }
+
+            audioSource.Stop();
+            audioSource.clip = null;
         }
 
         protected virtual void OnAudioFilterRead(float[] data, int channels)
         {
-            NativeArray<float> nativeArray = new NativeArray<float>(data, Allocator.Temp);
-            try
+            /*try
             {
-                track?.SetData(ref nativeArray, channels, m_sampleRate);
+                track?.SetData(data, channels, _sampleRate);
             }
-            // todo(kazuki):: Should catch only ObjectDisposedException but 
-            // AudioStreamTrack also throws NullReferenceException.
-            catch (Exception)
+            catch (InvalidOperationException)
             {
                 track = null;
-            }
-            finally
-            {
-                nativeArray.Dispose();
-            }
+            }*/
         }
     }
 }

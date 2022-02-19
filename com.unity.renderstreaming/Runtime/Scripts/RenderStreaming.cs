@@ -40,6 +40,8 @@ namespace Unity.RenderStreaming
         private SignalingEventProvider m_provider;
         private bool m_running;
 
+        public ISignaling signaling;
+
         static Type GetType(string typeName) {
             var type = Type.GetType(typeName);
             if (type != null) return type;
@@ -65,7 +67,7 @@ namespace Unity.RenderStreaming
                 return;
 
             RTCConfiguration conf = new RTCConfiguration {iceServers = iceServers};
-            ISignaling signaling = CreateSignaling(
+            signaling = CreateSignaling(
                 signalingType, urlSignaling, interval, SynchronizationContext.Current);
             _Run(conf, hardwareEncoderSupport, signaling, handlers.ToArray());
         }
@@ -133,18 +135,18 @@ namespace Unity.RenderStreaming
                 startCoroutine = StartCoroutine,
                 resentOfferInterval = interval,
             };
-            var _handlers = (handlers ?? this.handlers.AsEnumerable()).Where(_ => _ != null);
+            /*var _handlers = (handlers ?? this.handlers.AsEnumerable()).Where(_ => _ != null);
             if (_handlers.Count() == 0)
-                throw new InvalidOperationException("Handler list is empty.");
+                throw new InvalidOperationException("Handler list is empty.");*/
 
             m_instance = new RenderStreamingInternal(ref dependencies);
             m_provider = new SignalingEventProvider(m_instance);
-
-            foreach (var handler in _handlers)
+            
+            /*foreach (var handler in _handlers)
             {
                 handler.SetHandler(m_instance);
                 m_provider.Subscribe(handler);
-            }
+            }*/
             m_running = true;
         }
 
@@ -159,5 +161,20 @@ namespace Unity.RenderStreaming
         {
             Stop();
         }
+
+        #region public methods
+
+        public void AddHandler(SignalingHandlerBase signalingHandlerBase)
+        {
+            handlers.Add(signalingHandlerBase);
+            signalingHandlerBase.SetHandler(m_instance);
+            m_provider.Subscribe(signalingHandlerBase);
+        }
+        public void RemoveHandler(SignalingHandlerBase signalingHandlerBase)
+        {
+            handlers.Remove(signalingHandlerBase);
+            m_provider.Unsubscribe(signalingHandlerBase);
+        }
+        #endregion
     }
 }
